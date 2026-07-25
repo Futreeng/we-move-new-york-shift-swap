@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, rateLimitByIp, clientIp } from "@/lib/rateLimit";
 import { ok, err } from "@/lib/apiResponse";
 import { parseBody, BODY_2KB } from "@/lib/parseBody";
+import { sendEmail } from "@/lib/email";
+import { escapeHtml } from "@/lib/escapeHtml";
 
 export async function POST(
   req: NextRequest,
@@ -35,6 +38,50 @@ export async function POST(
   await prisma.report.create({
     data: { swapId: id, reporterId: user.userId, reason: reason ?? null },
   });
+
+  // Alert admins about the new report. Best-effort: the Resend call is
+  // fire-and-forget and any failure is swallowed to Sentry, so it can never
+  // delay or fail the reporter's 201 below.
+  const alertTo = process.env.REPORTS_ALERT_EMAIL || process.env.EMAIL_FROM;
+  if (alertTo) {
+    const reporter = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { firstName: true, lastName: true, depotId: true },
+    });
+
+    const reporterName = reporter ? `${reporter.firstName} ${reporter.lastName}`.trim() : "Unknown user";
+    const depot = reporter?.depotId ?? "—";
+    const reasonText = reason?.trim() ? reason.trim() : "(no reason given)";
+    const detailsSnippet = swap.details.slice(0, 200);
+    const reportedAt = new Date().toUTCString();
+    const reportsUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/admin?tab=reports`;
+
+    const subject = `New report on We Move NY (swap ${id})`;
+    const html = `
+      <h2>New abuse report</h2>
+      <p><strong>Time:</strong> ${escapeHtml(reportedAt)}</p>
+      <p><strong>Reporter:</strong> ${escapeHtml(reporterName)} (id: ${escapeHtml(user.userId)})</p>
+      <p><strong>Depot:</strong> ${escapeHtml(depot)}</p>
+      <p><strong>Swap:</strong> ${escapeHtml(id)}</p>
+      <p><strong>Reason:</strong> ${escapeHtml(reasonText)}</p>
+      <p><strong>Swap details (excerpt):</strong> ${escapeHtml(detailsSnippet)}</p>
+      <p><a href="${reportsUrl}">Open the admin reports dashboard</a></p>
+    `;
+    const text = [
+      "New abuse report on We Move NY",
+      `Time: ${reportedAt}`,
+      `Reporter: ${reporterName} (id: ${user.userId})`,
+      `Depot: ${depot}`,
+      `Swap: ${id}`,
+      `Reason: ${reasonText}`,
+      `Swap details (excerpt): ${detailsSnippet}`,
+      `Admin dashboard: ${reportsUrl}`,
+    ].join("\n");
+
+    sendEmail(alertTo, subject, html, text).catch((e) => {
+      Sentry.captureException(e, { level: "warning", tags: { source: "report-alert" } });
+    });
+  }
 
   return ok({ message: "Reported. Thank you." }, 201);
 }
