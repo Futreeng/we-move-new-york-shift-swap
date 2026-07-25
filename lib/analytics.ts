@@ -3,6 +3,7 @@
 // All calls are no-ops if window/gtag is not available.
 
 const GA_ID = "G-RJV2G8G06H";
+const OPTOUT_KEY = "wmny-analytics-optout";
 
 declare global {
   interface Window {
@@ -11,8 +12,31 @@ declare global {
   }
 }
 
+// Per-device analytics opt-out, persisted in localStorage.
+export function isAnalyticsOptedOut(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(OPTOUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setAnalyticsOptedOut(optedOut: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (optedOut) window.localStorage.setItem(OPTOUT_KEY, "1");
+    else window.localStorage.removeItem(OPTOUT_KEY);
+  } catch {
+    // localStorage unavailable (private mode / blocked) — kill switch below still applies.
+  }
+  // Google's official per-property kill switch.
+  (window as unknown as Record<string, unknown>)["ga-disable-" + GA_ID] = optedOut;
+}
+
 function gtag(...args: unknown[]) {
   if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+  if (isAnalyticsOptedOut()) return;
   window.gtag(...args);
 }
 

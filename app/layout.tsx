@@ -6,8 +6,7 @@ import { AuthProvider } from "@/lib/AuthContext";
 import MeshBackground from "@/components/ui/MeshBackground";
 import OfflineBanner from "@/components/ui/OfflineBanner";
 import AnalyticsProvider from "@/components/ui/AnalyticsProvider";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import OptOutAwareAnalytics from "@/components/ui/OptOutAwareAnalytics";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -44,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="ga-init" strategy="afterInteractive">{`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
+          try { if (window.localStorage.getItem('wmny-analytics-optout') === '1') { window['ga-disable-G-RJV2G8G06H'] = true; } } catch (e) {}
           gtag('js', new Date());
           gtag('config', 'G-RJV2G8G06H');
         `}</Script>
@@ -59,8 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </AnalyticsProvider>
         </AuthProvider>
-        <Analytics />
-        <SpeedInsights />
+        <OptOutAwareAnalytics />
       </body>
     </html>
   );
