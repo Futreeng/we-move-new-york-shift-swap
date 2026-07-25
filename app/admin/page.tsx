@@ -80,6 +80,16 @@ export default function AdminPage() {
     setToast(msg); setTimeout(() => setToast(null), 2500);
   }, []);
 
+  // Honor a ?tab= deep-link (e.g. from admin alert emails). Read on mount only,
+  // client-side, so no Suspense boundary is required and there's no SSR mismatch.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    const allowed = ["reports", "users", "invites", "audit", "broadcast"] as const;
+    if (t && (allowed as readonly string[]).includes(t)) {
+      setTab(t as typeof allowed[number]);
+    }
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
     if (!loading && user && !["admin", "subAdmin"].includes(user.role)) router.replace("/depots");
