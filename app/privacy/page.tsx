@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
       <main id="main-content" tabIndex={-1} style={s.content}>
         <h1 style={s.h1}>Privacy Policy</h1>
-        <p style={s.updated}>Last updated: April 17, 2026</p>
+        <p style={s.updated}>Last updated: July 25, 2026</p>
 
         <div style={s.section}>
           <h2 style={s.h2}>1. Overview</h2>
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
           <p style={s.p}><strong style={{ color: C.white }}>Swap Listings:</strong> Content you post — including shift details, run numbers, routes, and dates — is visible to other verified users at your depot.</p>
           <p style={s.p}><strong style={{ color: C.white }}>Messages:</strong> Messages sent through the platform are stored to facilitate swap coordination. Messages are only visible to the sender and recipient.</p>
           <p style={s.p}><strong style={{ color: C.white }}>Reputation & Reviews:</strong> Ratings and completion history are stored and displayed to other users to build trust in the platform.</p>
-          <p style={s.p}><strong style={{ color: C.white }}>Usage Data:</strong> We use Google Analytics and Google Tag Manager to collect basic usage data such as pages visited and features used to improve the App. This data is processed by Google in accordance with their privacy policy. We do not sell this data, and we do not use it to identify individual users or share it with your employer.</p>
+          <p style={s.p}><strong style={{ color: C.white }}>Usage Data:</strong> We use Google Analytics and Google Tag Manager (Google services) to understand how the App is used. This collects which pages and screens you visit, which features you tap, your device and browser type, and an approximate location derived from your IP address. Google may also set its own cookies or identifiers as part of this. We do <strong style={{ color: C.white }}>not</strong> send Google the content of your messages, your identity-linked swap details, or your password. This usage data is never shared with your employer, the MTA, or any union, and is never sold. Google processes it under its own <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>Privacy Policy</a>. You can turn analytics off at any time — see <strong style={{ color: C.white }}>Cookies &amp; Your Choices</strong> below.</p>
         </div>
 
         <hr style={s.divider} />
@@ -97,8 +97,15 @@ export default function PrivacyPage() {
         <hr style={s.divider} />
 
         <div style={s.section}>
-          <h2 style={s.h2}>7. Cookies</h2>
-          <p style={s.p}>We use secure login cookies to maintain your session — these are set by our servers and are not accessible to browser scripts, which protects your login from common web attacks. We do not use third-party tracking cookies or advertising cookies. No data is shared with advertisers.</p>
+          <h2 style={s.h2}>7. Cookies &amp; Your Choices</h2>
+          <p style={s.p}>We use secure login cookies to maintain your session — these are set by our servers and are not accessible to browser scripts, which protects your login from common web attacks.</p>
+          <p style={s.p}>Our analytics tools (Google Analytics and Google Tag Manager) may set their own cookies or identifiers to measure how the App is used. You can opt out of this at any time:</p>
+          <ul style={{ listStyle: "disc", paddingLeft: 24, marginBottom: 12 }}>
+            <li style={s.li}>Turn off <strong style={{ color: C.white }}>Share anonymous usage analytics</strong> in your Profile — this stops analytics from that device immediately.</li>
+            <li style={s.li}>Install Google&apos;s <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>Analytics Opt-out Browser Add-on</a> to block Google Analytics across all sites.</li>
+            <li style={s.li}>Enable <strong style={{ color: C.white }}>Do Not Track</strong>, block cookies, or use your browser&apos;s private / incognito mode.</li>
+          </ul>
+          <p style={s.p}>Opting out of analytics does not affect your ability to post, claim, or message about swaps — the App works exactly the same.</p>
         </div>
 
         <hr style={s.divider} />
@@ -111,6 +118,7 @@ export default function PrivacyPage() {
             <li style={s.li}>Delete your swap posts at any time.</li>
             <li style={s.li}>Request deletion of your account and all associated data.</li>
             <li style={s.li}>Opt out of non-essential communications.</li>
+            <li style={s.li}>Opt out of analytics tracking (see Section 7 for how).</li>
           </ul>
           <p style={s.p}>To exercise any of these rights, email us at wemovenewyork.net@gmail.com or contact us through the app.</p>
         </div>

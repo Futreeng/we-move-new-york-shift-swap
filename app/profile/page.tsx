@@ -13,7 +13,7 @@ import Toast from "@/components/ui/Toast";
 import NotifToggle from "@/components/ui/NotifToggle";
 import InboxIcon from "@/components/ui/InboxIcon";
 import NotifIcon from "@/components/ui/NotifIcon";
-import { analytics } from "@/lib/analytics";
+import { analytics, isAnalyticsOptedOut, setAnalyticsOptedOut } from "@/lib/analytics";
 import { useT } from "@/lib/i18n";
 import CountUp from "@/components/ui/CountUp";
 import ProgressRing from "@/components/ui/ProgressRing";
@@ -54,6 +54,7 @@ export default function ProfilePage() {
   const [depots, setDepots] = useState<Depot[]>([]); const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [notifSettings, setNotifSettings] = useState<NotifSettings | null>(null);
+  const [analyticsOn, setAnalyticsOn] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); }, []);
@@ -72,6 +73,10 @@ export default function ProfilePage() {
     if (!user) return;
     api.get<NotifSettings>("/users/me/notification-prefs").then(setNotifSettings).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    setAnalyticsOn(!isAnalyticsOptedOut());
+  }, []);
 
   const savePrefs = async (patch: Partial<NotifSettings["prefs"]>) => {
     if (!notifSettings) return;
@@ -438,9 +443,27 @@ export default function ProfilePage() {
           </div>
         )}
 
+        <div style={{ marginTop: 20, background: "rgba(255,255,255,.03)", borderRadius: 14, padding: 14, border: `1px solid ${C.bd}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Privacy</div>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.white, marginBottom: 4 }}>Share anonymous usage analytics</div>
+              <div style={{ fontSize: 12, color: C.m, lineHeight: 1.5 }}>Helps us improve the app. Never shared with your employer, the MTA, or any union. Turning this off stops analytics from this device.</div>
+            </div>
+            <PillToggle
+              on={analyticsOn}
+              onChange={(v) => {
+                setAnalyticsOn(v);
+                setAnalyticsOptedOut(!v);
+                showToast(v ? "Analytics on" : "Analytics off — nothing is tracked from this device");
+              }}
+            />
+          </div>
+        </div>
+
         <button
           onClick={() => router.push("/help")}
-          style={{ marginTop: 20, padding: 16, borderRadius: 14, border: `1px solid ${C.bd}`, background: "rgba(255,255,255,.04)", cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.m, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%" }}
+          style={{ marginTop: 10, padding: 16, borderRadius: 14, border: `1px solid ${C.bd}`, background: "rgba(255,255,255,.04)", cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.m, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%" }}
         >
           <Icon n="inf" s={16} c={C.m} /> Help &amp; FAQ
         </button>
