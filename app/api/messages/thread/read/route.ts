@@ -11,6 +11,18 @@ export async function POST(req: NextRequest) {
   if (body instanceof NextResponse) return body;
   const { with: counterpartId } = body as { with: string };
   if (!counterpartId) return err("counterpartId required", 400);
+
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.userId, blockedId: counterpartId },
+        { blockerId: counterpartId, blockedId: user.userId },
+      ],
+    },
+    select: { id: true },
+  });
+  if (block) return err("Conversation not found", 404);
+
   await prisma.message.updateMany({
     where: { fromUserId: counterpartId, toUserId: user.userId, read: false },
     data: { read: true },

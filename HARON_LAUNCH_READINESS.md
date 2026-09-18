@@ -9,36 +9,46 @@
 
 The application has a solid amount of implemented functionality, but it is not yet possible to certify it as 100% launch-ready. The most important reasons are:
 
-1. Global logout is not reliably enforced for all token paths.
-2. Blocked users can still read existing conversation threads unless this is explicitly approved as an evidence-retention policy.
-3. The full database and Redis test coverage has not been proven in this environment; critical tests were skipped.
-4. Production dependency vulnerabilities require triage.
-5. Staging, live infrastructure, deployment, migration, device, email, push, and rollback checks still require evidence from the actual deployment environment.
+1. The global logout and blocking fixes still need service-backed verification.
+2. The full database and Redis test coverage has not been proven in this environment; critical tests were skipped.
+3. Production dependency vulnerabilities require triage after the Next.js upgrade.
+4. Staging, live infrastructure, deployment, migration, device, email, push, and rollback checks still require evidence from the actual deployment environment.
 
 Do not treat a green unit-test subset as launch approval. Launch approval requires the blocker fixes below plus the evidence checklist at the end of this document.
 
+## Implementation Update: 2026-09-18
+
+The following fixes were implemented in the repository and require deployment-backed verification:
+
+- Logout-all and single-device logout now cover access and refresh tokens for the full refresh lifetime, honor bearer-token requests in middleware, and return `503` instead of claiming success when Redis revocation cannot be recorded.
+- Blocked conversation thread reads, mark-read requests, and per-message operations now return `404` without exposing or mutating the conversation.
+- Production rate-limited operations now fail closed when configured Redis is unavailable.
+- Regression tests were added for logout-all refresh revocation and blocked conversation access.
+- Login, Terms, Privacy, and disclosure text now match the non-affiliation, analytics, email, replay-masking, and blocking behavior.
+
+These changes are not considered release-approved until the DB/Redis tests execute successfully and the deployed behavior is verified.
+
 ## Launch Blockers
 
-### B1. Fix global logout and token revocation
+### B1. Verify global logout and token revocation
 
 **Severity:** Critical security issue
 
+**Implementation status:** Code fix complete; infrastructure-backed verification pending.
+
 **Evidence:**
 
-- `app/api/auth/logout-all/route.ts` updates `user.updatedAt` and attempts to block access tokens.
-- `app/api/auth/refresh/route.ts` checks refresh-token blocklisting, but does not compare token issuance against `updatedAt` or a token version.
-- `middleware.ts` only reads the access-token cookie when applying force-logout. Requests using the supported `Authorization: Bearer ...` path can bypass that middleware check.
-- The refresh route does not consult the force-logout marker.
+- `app/api/auth/logout-all/route.ts` writes a Redis force-logout marker and reports `503` if it cannot be recorded.
+- `app/api/auth/refresh/route.ts` checks the force-logout marker and refresh-token blocklist before rotating tokens.
+- `middleware.ts` checks both cookie and `Authorization: Bearer ...` access tokens.
+- Production requests fail closed when configured Redis cannot be reached.
 
-**Risk:** A stolen refresh token may remain usable for up to seven days, and a stolen bearer access token may remain usable until expiry or bypass the middleware revocation path.
+**Remaining risk:** This design depends on Redis availability and still requires integration testing in CI/staging.
 
-**Required fix:** Choose and implement one complete revocation design:
+**Required verification:**
 
-- Add a `tokenVersion` to `User`.
-- Include the version in access and refresh JWTs.
-- Increment it on logout-all, password reset, account deletion, suspension, and role demotion where appropriate.
-- Verify it in both access-token authorization and refresh-token rotation.
-- Ensure cookie and bearer-token requests use the same authorization and revocation checks.
+- Run the Redis-backed integration tests and deploy to staging.
+- Confirm password reset, account deletion, suspension, and role demotion revoke sessions according to the intended policy.
 
 A Redis-only design is acceptable only if every token type and every supported transport is covered and tested.
 
@@ -49,22 +59,24 @@ A Redis-only design is acceptable only if every token type and every supported t
 - A test proves logout-all rejects an old refresh token.
 - A test proves password reset, suspension, deletion, and role demotion revoke sessions according to the intended policy.
 
-### B2. Define and enforce blocking behavior for conversation reads
+### B2. Verify blocking behavior for conversation reads
 
 **Severity:** High safety/privacy issue
+
+**Implementation status:** Code fix complete; infrastructure-backed verification pending.
 
 **Evidence:**
 
 - Message creation routes check the `Block` relationship.
 - Agreement and swap visibility routes check the `Block` relationship.
-- `GET /api/messages/thread` returns messages between two users without checking whether either user blocked the other.
+- The thread list, thread reads, mark-read requests, and individual message operations now apply symmetric block checks.
 
-**Risk:** A user who believes they blocked a harasser may still see or expose an active conversation through the thread endpoint. This is inconsistent with the current blocking behavior elsewhere.
+**Remaining risk:** The policy still requires DB-backed and deployed verification.
 
 **Required decision and fix:**
 
-- Preferred safety behavior: return an empty result or `403`/`404` for blocked conversation reads, and prevent read-state updates.
-- If conversation history must remain available for abuse evidence, document that policy in the UI and privacy documentation, provide an abuse-report path, and add tests proving exactly what each participant can still access.
+- The implemented safety behavior is neutral `404` for blocked conversation reads and message mutations, preventing read-state updates.
+- If conversation history must remain available for abuse evidence, change this policy deliberately and add tests proving exactly what each participant can still access.
 
 **Acceptance evidence:**
 

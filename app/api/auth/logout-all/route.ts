@@ -8,12 +8,14 @@ export async function POST(req: NextRequest) {
   let user;
   try { user = requireUser(req); } catch { return err("Unauthorized", 401); }
 
-  await Promise.all([
+  const [, revoked] = await Promise.all([
     // Bump updatedAt to invalidate all refresh tokens at next rotation
     prisma.user.update({ where: { id: user.userId }, data: { updatedAt: new Date() } }),
-    // Mark all current access tokens as invalid in Redis (15-min TTL = token lifetime)
+    // Mark all current access and refresh tokens as invalid in Redis.
     blockUserAccessTokens(user.userId),
   ]);
+
+  if (!revoked) return err("Session revocation is temporarily unavailable", 503);
 
   return ok({ success: true });
 }

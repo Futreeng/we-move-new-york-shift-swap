@@ -192,3 +192,77 @@ test("A12 (grace window, Redis required): reuse inside 30s returns the SAME pair
     assert.equal(r3.status, 200);
   } finally { await cleanupTag(ctx, tag, depot.id); }
 });
+
+// ── (e) logout-all revocation ──────────────────────────────────────────────
+
+test("logout-all rejects a previously issued refresh token", { skip: !DB || !REDIS }, async () => {
+  const ctx = await loadCtx();
+  const tag = `as-${randomUUID().slice(0, 8)}`;
+  const depot = await ctx.prisma.depot.create({ data: { name: tag, code: tag, borough: "Queens", operator: "NYCT" } });
+  try {
+    const user = await seedDepotUser(ctx, tag, "logout", depot.id, true);
+    const accessToken = ctx.signAccessToken({ userId: user.id, email: user.email });
+    const refreshToken = ctx.signRefreshToken({ userId: user.id, email: user.email });
+
+    const { POST: logoutAll } = await import("../app/api/auth/logout-all/route");
+    const logoutResponse = await logoutAll(new ctx.NextRequest("http://localhost/api/auth/logout-all", {
+      method: "POST",
+      headers: { authorization: `Bearer ${accessToken}` },
+    }));
+    assert.equal(logoutResponse.status, 200);
+
+    const { POST: refresh } = await import("../app/api/auth/refresh/route");
+    const refreshResponse = await refresh(new ctx.NextRequest("http://localhost/api/auth/refresh", {
+      method: "POST",
+      headers: { cookie: `refreshToken=${refreshToken}` },
+    }));
+    assert.equal(refreshResponse.status, 401);
+  } finally { await cleanupTag(ctx, tag, depot.id); }
+});
+
+// ── (f) blocked conversation reads ─────────────────────────────────────────
+
+test("blocked users cannot read or mark a conversation as read", { skip: !DB }, async () => {
+  const ctx = await loadCtx();
+  const tag = `as-${randomUUID().slice(0, 8)}`;
+  const depot = await ctx.prisma.depot.create({ data: { name: tag, code: tag, borough: "Queens", operator: "NYCT" } });
+  try {
+    const viewer = await seedDepotUser(ctx, tag, "viewer", depot.id, true);
+    const counterpart = await seedDepotUser(ctx, tag, "counterpart", depot.id, true);
+    const message = await ctx.prisma.message.create({
+      data: { fromUserId: counterpart.id, toUserId: viewer.id, text: `${tag} message` },
+    });
+    await ctx.prisma.block.create({ data: { blockerId: viewer.id, blockedId: counterpart.id } });
+
+    const { GET: getThread } = await import("../app/api/messages/thread/route");
+    const threadResponse = await getThread(new ctx.NextRequest(`http://localhost/api/messages/thread?with=${counterpart.id}`, {
+      headers: { authorization: `Bearer ${ctx.signAccessToken({ userId: viewer.id, email: viewer.email })}` },
+    }));
+    assert.equal(threadResponse.status, 404);
+
+    const { POST: markThreadRead } = await import("../app/api/messages/thread/read/route");
+    const readResponse = await markThreadRead(new ctx.NextRequest("http://localhost/api/messages/thread/read", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${ctx.signAccessToken({ userId: viewer.id, email: viewer.email })}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ with: counterpart.id }),
+    }));
+    assert.equal(readResponse.status, 404);
+
+    const { PUT: markMessageRead } = await import("../app/api/messages/[id]/read/route");
+    const messageReadResponse = await markMessageRead(new ctx.NextRequest(`http://localhost/api/messages/${message.id}/read`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${ctx.signAccessToken({ userId: viewer.id, email: viewer.email })}` },
+    }), { params: Promise.resolve({ id: message.id }) });
+    assert.equal(messageReadResponse.status, 404);
+
+    const { DELETE: deleteMessage } = await import("../app/api/messages/[id]/route");
+    const deleteResponse = await deleteMessage(new ctx.NextRequest(`http://localhost/api/messages/${message.id}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${ctx.signAccessToken({ userId: counterpart.id, email: counterpart.email })}` },
+    }), { params: Promise.resolve({ id: message.id }) });
+    assert.equal(deleteResponse.status, 404);
+  } finally { await cleanupTag(ctx, tag, depot.id); }
+});

@@ -16,6 +16,7 @@ const getResetSecret = () => requireEnv("JWT_RESET_SECRET");
 export interface TokenPayload {
   userId: string;
   email: string;
+  iat?: number;
 }
 
 export function signAccessToken(payload: TokenPayload): string {

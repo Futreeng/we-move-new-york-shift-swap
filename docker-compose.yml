@@ -18,6 +18,24 @@ services:
       timeout: 5s
       retries: 5
 
+  redis-rest:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /workspace
+    command: ["node", "test/redis-rest-server.mjs"]
+    environment:
+      REDIS_REST_PORT: "8079"
+      REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-local-dev-token}
+    volumes:
+      - .:/workspace
+    ports:
+      - "8079:8079"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8079',{method:'POST',headers:{authorization:'Bearer '+process.env.REDIS_REST_TOKEN,'content-type':'application/json'},body:'[\\\"PING\\\"]'}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   app:
     build: .
     restart: unless-stopped
@@ -26,11 +44,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis-rest:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://wemoveny:wemoveny_dev@postgres:5432/wemoveny
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      CRON_SECRET: ${CRON_SECRET}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:-local-only-reset-secret-please-change-32chars}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-local-only-resend-key}
+      EMAIL_FROM: ${EMAIL_FROM:-local@example.test}
+      CRON_SECRET: ${CRON_SECRET:-local-only-cron-secret}
+      VAPID_EMAIL: ${VAPID_EMAIL:-mailto:local@example.test}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-local-only-vapid-public-key}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-local-only-vapid-private-key}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-http://redis-rest:8079}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-local-dev-token}
       NODE_ENV: production
 
 volumes:

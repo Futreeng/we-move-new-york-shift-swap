@@ -15,6 +15,17 @@ export async function PUT(
   if (!msg) return err("Message not found", 404);
   if (msg.toUserId !== user.userId) return err("Not authorized", 403);
 
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.userId, blockedId: msg.fromUserId },
+        { blockerId: msg.fromUserId, blockedId: user.userId },
+      ],
+    },
+    select: { id: true },
+  });
+  if (block) return err("Message not found", 404);
+
   await prisma.message.update({ where: { id }, data: { read: true } });
   return ok({ message: "Marked as read" });
 }

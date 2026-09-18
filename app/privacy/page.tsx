@@ -34,7 +34,7 @@ export default function PrivacyPage() {
 
         <div style={s.section}>
           <h2 style={s.h2}>1. Overview</h2>
-          <p style={s.p}>We Move New York ("WMNY," "we," "us") is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data. By using the App, you agree to the practices described in this policy.</p>
+          <p style={s.p}>We Move New York ("WMNY," "we," "us") is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and your rights regarding your data. WMNY is not affiliated with, endorsed by, or operated by TWU Local 100, the MTA, NYCT, or any labor union. By using the App, you agree to the practices described in this policy.</p>
         </div>
 
         <hr style={s.divider} />
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
           <p style={s.p}><strong style={{ color: C.white }}>Swap Listings:</strong> Content you post — including shift details, run numbers, routes, and dates — is visible to other verified users at your depot.</p>
           <p style={s.p}><strong style={{ color: C.white }}>Messages:</strong> Messages sent through the platform are stored to facilitate swap coordination. Messages are only visible to the sender and recipient.</p>
           <p style={s.p}><strong style={{ color: C.white }}>Reputation & Reviews:</strong> Ratings and completion history are stored and displayed to other users to build trust in the platform.</p>
-          <p style={s.p}><strong style={{ color: C.white }}>Usage Data:</strong> We use Google Analytics and Google Tag Manager to collect basic usage data such as pages visited and features used to improve the App. This data is processed by Google in accordance with their privacy policy. We do not sell this data, and we do not use it to identify individual users or share it with your employer.</p>
+          <p style={s.p}><strong style={{ color: C.white }}>Usage Data:</strong> We use Google Analytics and Google Tag Manager to collect basic usage data such as pages visited and features used to improve the App. We use Sentry to monitor errors and performance; client replay data is configured to mask inputs and text. We use Resend to deliver transactional email. These providers process data under their own privacy policies. We do not sell this data, and we do not use it to identify individual users or share it with your employer.</p>
         </div>
 
         <hr style={s.divider} />
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
 
         <div style={s.section}>
           <h2 style={s.h2}>7. Cookies</h2>
-          <p style={s.p}>We use secure login cookies to maintain your session — these are set by our servers and are not accessible to browser scripts, which protects your login from common web attacks. We do not use third-party tracking cookies or advertising cookies. No data is shared with advertisers.</p>
+          <p style={s.p}>We use secure login cookies to maintain your session — these are set by our servers and are not accessible to browser scripts, which protects your login from common web attacks. Google Analytics and Google Tag Manager may use cookies or similar technologies for usage measurement. We do not use advertising cookies or sell data to advertisers.</p>
         </div>
 
         <hr style={s.divider} />

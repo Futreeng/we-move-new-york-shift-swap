@@ -16,6 +16,17 @@ export async function DELETE(
   if (!message) return err("Message not found", 404);
   if (message.fromUserId !== user.userId) return err("You can only delete your own messages", 403);
 
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.userId, blockedId: message.toUserId },
+        { blockerId: message.toUserId, blockedId: user.userId },
+      ],
+    },
+    select: { id: true },
+  });
+  if (block) return err("Message not found", 404);
+
   await prisma.message.delete({ where: { id } });
 
   return ok({ deleted: true });

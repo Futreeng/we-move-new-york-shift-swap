@@ -80,7 +80,7 @@ export default function TermsPage() {
           <h2 style={s.h2}>5. Reporting and Blocking</h2>
           <p style={s.p}>We Move New York includes tools to help you manage unwanted contact:</p>
           <ul style={{ listStyle: "disc", paddingLeft: 24, marginBottom: 12 }}>
-            <li style={s.li}>You may block any other user at any time from within the app. Blocked users will not be able to send you direct messages or contact you about your swap posts.</li>
+            <li style={s.li}>You may block any other user at any time from within the app. Blocked users will not be able to send you direct messages, contact you about your swap posts, or access your conversation thread.</li>
             <li style={s.li}>You may report users who violate these Terms, including users engaged in harassment, fraud, or other prohibited conduct.</li>
           </ul>
           <p style={s.p}>We review reports in good faith and may take action including warnings, suspension, or permanent account termination. We do not guarantee a specific response timeline, but we take harassment and safety concerns seriously. Users found to be retaliating against reporters may have their accounts terminated.</p>

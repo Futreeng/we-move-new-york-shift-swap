@@ -49,18 +49,29 @@ export async function middleware(req: NextRequest) {
     !pathname.startsWith("/api/auth/reset-password") &&
     !pathname.startsWith("/api/cron/")
   ) {
-    const token = req.cookies.get("accessToken")?.value;
+    const token = req.cookies.get("accessToken")?.value
+      ?? (req.headers.get("authorization")?.startsWith("Bearer ")
+        ? req.headers.get("authorization")!.slice(7)
+        : null);
     if (token) {
       const payload = decodeJwtPayload(token);
       if (payload?.userId && payload?.iat) {
         const store = getRedis();
-        if (store) {
+        if (!store) {
+          if (process.env.NODE_ENV === "production") {
+            return NextResponse.json({ error: "Session validation temporarily unavailable" }, { status: 503 });
+          }
+        } else {
           try {
             const val = await store.get(`force-logout:${payload.userId}`);
             if (val && payload.iat * 1000 < Number(val)) {
               return NextResponse.json({ error: "Session invalidated. Please sign in again." }, { status: 401 });
             }
-          } catch { /* fail open — Redis errors should not block requests */ }
+          } catch {
+            if (process.env.NODE_ENV === "production") {
+              return NextResponse.json({ error: "Session validation temporarily unavailable" }, { status: 503 });
+            }
+          }
         }
       }
     }

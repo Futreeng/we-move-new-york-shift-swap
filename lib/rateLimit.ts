@@ -77,7 +77,7 @@ export async function rateLimit(key: string, limit: number, windowMs: number): P
         // Don't let Sentry import failure break the rate limiter
       }
     }
-    return true;
+    return process.env.NODE_ENV !== "production";
   }
 }
 

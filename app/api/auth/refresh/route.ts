@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyRefreshToken, signAccessToken, signRefreshToken, checkActive } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { err } from "@/lib/apiResponse";
-import { blockRefreshToken, isRefreshTokenBlocked, storeRotationGrace, getRotationGrace } from "@/lib/tokenBlocklist";
+import { blockRefreshToken, isRefreshTokenBlocked, storeRotationGrace, getRotationGrace, isUserForcedLogout } from "@/lib/tokenBlocklist";
 import crypto from "crypto";
 
 function hashToken(token: string): string {
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const payload = verifyRefreshToken(refreshToken);
+
+    const issuedAt = typeof payload.iat === "number" ? payload.iat * 1000 : 0;
+    if (!issuedAt || await isUserForcedLogout(payload.userId, issuedAt)) {
+      return err("Session invalidated. Please sign in again.", 401);
+    }
 
     // Reject if token has been revoked — unless we're inside the 30s rotation
     // grace window (A12): a concurrent tab that lost the rotation race gets
@@ -79,7 +84,9 @@ export async function POST(req: NextRequest) {
     const newRefreshToken = signRefreshToken({ userId: payload.userId, email: payload.email });
 
     await storeRotationGrace(tokenHash, { accessToken: newAccessToken, refreshToken: newRefreshToken });
-    await blockRefreshToken(tokenHash, ttlSeconds);
+    if (!await blockRefreshToken(tokenHash, ttlSeconds)) {
+      return err("Session security service temporarily unavailable", 503);
+    }
 
     return withAuthCookies(NextResponse.json({ ok: true }), newAccessToken, newRefreshToken);
   } catch {

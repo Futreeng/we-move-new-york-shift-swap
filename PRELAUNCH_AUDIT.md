@@ -1,5 +1,9 @@
 # We Move NY — Pre-Launch Audit Report
 
+> **Historical snapshot:** This report was written on 2026-04-16 and is not the
+> current launch status. Several findings below were subsequently fixed. Use
+> `HARON_LAUNCH_READINESS.md` as the current implementation and release gate.
+
 **Date:** 2026-04-16  
 **Auditor:** Claude Code (automated, human-reviewed)  
 **Scope:** Functional QA · Security · Pre-Launch Ops · Shift-Swap–Specific  

@@ -1,5 +1,9 @@
 # Audit Action Plan
 
+> **Historical action plan:** Generated from the 2026-04-16 audit. Do not use
+> this file as the current task list; use `HARON_LAUNCH_READINESS.md`, which
+> reflects the current code and remaining verification gates.
+
 Generated from `PRELAUNCH_AUDIT.md` — 2026-04-16.  
 Fix these in order. HIGH items are launch-blockers.
 

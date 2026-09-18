@@ -218,7 +218,7 @@ export default function LoginPage() {
         </div>
 
         <p style={{ fontSize: 11, color: "rgba(255,255,255,.35)", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
-          Not affiliated with the MTA, NYCT, or any labor union. Unofficial peer-to-peer tool.{" "}
+          Not affiliated with, endorsed by, or operated by TWU Local 100, the MTA, NYCT, or any labor union. Unofficial peer-to-peer tool.{" "}
           <a href="/disclaimer" style={{ color: "rgba(255,255,255,.45)", textDecoration: "underline" }}>Disclaimer</a>
         </p>
 

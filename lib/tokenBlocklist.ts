@@ -16,12 +16,15 @@ function getRedis(): Redis | null {
 }
 
 // Add a refresh token to the blocklist. ttlSeconds = remaining token lifetime.
-export async function blockRefreshToken(tokenHash: string, ttlSeconds: number): Promise<void> {
+export async function blockRefreshToken(tokenHash: string, ttlSeconds: number): Promise<boolean> {
   const store = getRedis();
-  if (!store) return;
+  if (!store) return process.env.NODE_ENV !== "production";
   try {
     await store.set(`revoked:${tokenHash}`, "1", { ex: ttlSeconds });
-  } catch { /* non-fatal */ }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Check if a refresh token is blocklisted.
@@ -74,26 +77,32 @@ export async function getRotationGrace(oldTokenHash: string): Promise<RotationGr
   }
 }
 
-// Force-invalidate all outstanding access tokens for a user (logout-all).
-// Stores a timestamp; any access token issued before it is rejected.
-// TTL = 900s (15 min) — matches the access token lifetime.
-export async function blockUserAccessTokens(userId: string): Promise<void> {
+// Force-invalidate all outstanding tokens for a user (logout-all).
+// Stores a timestamp; any access or refresh token issued before it is rejected.
+// TTL covers the refresh token lifetime, so logout-all cannot be bypassed by
+// rotating an old refresh token after the access token expires.
+export async function blockUserAccessTokens(userId: string): Promise<boolean> {
   const store = getRedis();
-  if (!store) return;
+  if (!store) return process.env.NODE_ENV !== "production";
   try {
-    await store.set(`force-logout:${userId}`, String(Date.now()), { ex: 900 });
-  } catch { /* non-fatal */ }
+    // JWT iat claims are second-granular. Advance the marker by one second so
+    // a token created in the current second cannot survive the comparison.
+    await store.set(`force-logout:${userId}`, String(Date.now() + 1_000), { ex: 7 * 24 * 60 * 60 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Returns true if the token (identified by its iat in ms) was issued before a force-logout.
 export async function isUserForcedLogout(userId: string, iatMs: number): Promise<boolean> {
   const store = getRedis();
-  if (!store) return false;
+  if (!store) return process.env.NODE_ENV === "production";
   try {
     const val = await store.get(`force-logout:${userId}`);
     if (!val) return false;
     return iatMs < Number(val);
   } catch {
-    return false; // fail open — don't lock out users if Redis is down
+    return true; // fail closed — revocation cannot be proven while Redis is down
   }
 }

@@ -13,7 +13,12 @@ export async function POST(req: NextRequest) {
     try {
       const decoded = JSON.parse(Buffer.from(refreshToken.split(".")[1], "base64url").toString());
       const ttlSeconds = Math.max(0, (decoded.exp ?? 0) - Math.floor(Date.now() / 1000));
-      await blockRefreshToken(hashToken(refreshToken), ttlSeconds);
+      if (!await blockRefreshToken(hashToken(refreshToken), ttlSeconds)) {
+        const res = NextResponse.json({ error: "Session security service temporarily unavailable" }, { status: 503 });
+        res.cookies.set("accessToken", "", { httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: 0 });
+        res.cookies.set("refreshToken", "", { httpOnly: true, secure: true, sameSite: "strict", path: "/api/auth", maxAge: 0 });
+        return res;
+      }
     } catch { /* non-fatal — token may be expired already */ }
   }
 

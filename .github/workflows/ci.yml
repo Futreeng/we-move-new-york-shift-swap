@@ -56,13 +56,14 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/shiftswap_test
       JWT_SECRET: ci-test-secret-do-not-use-in-prod
       JWT_REFRESH_SECRET: ci-test-refresh-secret-do-not-use-in-prod
       JWT_RESET_SECRET: ci-test-reset-secret-do-not-use-in-prod
       CRON_SECRET: ci-test-cron-secret
+      UPSTASH_REDIS_REST_URL: http://localhost:8079
+      UPSTASH_REDIS_REST_TOKEN: ci-test-redis-token
 
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +86,21 @@ jobs:
       # tests return 201 instead of 409. See prisma/partial-indexes.sql.
       - run: npx prisma db push --accept-data-loss
       - run: npx prisma db execute --file prisma/partial-indexes.sql
+
+      - name: Start Redis REST test adapter
+        run: node test/redis-rest-server.mjs > redis-rest.log 2>&1 &
+
+      - name: Wait for Redis REST test adapter
+        run: |
+          for i in {1..20}; do
+            curl --fail --silent -X POST http://localhost:8079 \
+              -H 'Authorization: Bearer ci-test-redis-token' \
+              -H 'Content-Type: application/json' \
+              --data '["PING"]' && exit 0
+            sleep 1
+          done
+          cat redis-rest.log
+          exit 1
 
       - name: Run tests
         run: |
@@ -110,3 +126,11 @@ jobs:
           fi
           echo "DB-backed tests confirmed running:"
           grep -E '^(ℹ|#) (tests|pass|fail|skipped)' test-output.txt
+          if ! grep -qE '^(✔|ok [0-9]+ -).*logout-all rejects a previously issued refresh token' test-output.txt; then
+            echo "::error::Redis-backed logout-all test did not execute"
+            exit 1
+          fi
+          if ! grep -qE '^(✔|ok [0-9]+ -).*A12 \(grace window, Redis required\)' test-output.txt; then
+            echo "::error::Redis-backed rotation grace test did not execute"
+            exit 1
+          fi

@@ -11,6 +11,17 @@ export async function GET(req: NextRequest) {
   const withUserId = url.searchParams.get("with");
   if (!withUserId) return err("'with' query param required", 400);
 
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.userId, blockedId: withUserId },
+        { blockerId: withUserId, blockedId: user.userId },
+      ],
+    },
+    select: { id: true },
+  });
+  if (block) return err("Conversation not found", 404);
+
   const [messages] = await Promise.all([
     prisma.message.findMany({
       where: {
