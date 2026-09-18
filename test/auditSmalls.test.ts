@@ -27,6 +27,8 @@ async function cleanupTag(ctx: Ctx, tag: string, depotId: string) {
   const users = await ctx.prisma.user.findMany({ where: { email: { startsWith: tag } }, select: { id: true } });
   const ids = users.map(u => u.id);
   await ctx.prisma.notification.deleteMany({ where: { userId: { in: ids } } });
+  await ctx.prisma.message.deleteMany({ where: { OR: [{ fromUserId: { in: ids } }, { toUserId: { in: ids } }] } });
+  await ctx.prisma.block.deleteMany({ where: { OR: [{ blockerId: { in: ids } }, { blockedId: { in: ids } }] } });
   await ctx.prisma.swapAgreement.deleteMany({ where: { swap: { userId: { in: ids } } } });
   await ctx.prisma.swap.deleteMany({ where: { userId: { in: ids } } });
   await ctx.prisma.user.deleteMany({ where: { id: { in: ids } } });
