@@ -88,7 +88,9 @@ jobs:
       - run: npx prisma db execute --file prisma/partial-indexes.sql
 
       - name: Start Redis REST test adapter
-        run: node test/redis-rest-server.mjs > redis-rest.log 2>&1 &
+        run: |
+          node test/redis-rest-server.mjs > redis-rest.log 2>&1 &
+          echo $! > redis-rest.pid
 
       - name: Wait for Redis REST test adapter
         run: |
@@ -104,8 +106,9 @@ jobs:
 
       - name: Run tests
         run: |
+          trap 'kill "$(cat redis-rest.pid)" 2>/dev/null || true' EXIT
           set -o pipefail
-          npm test 2>&1 | tee test-output.txt
+          timeout 5m npm test 2>&1 | tee test-output.txt
 
       # Canary: a green run with DATABASE_URL unset is indistinguishable from a
       # real pass, because the DB tests self-gate via `{ skip: !DB }`. Assert
